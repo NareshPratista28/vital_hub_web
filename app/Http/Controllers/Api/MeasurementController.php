@@ -74,7 +74,7 @@ class MeasurementController extends Controller
                     'status' => 'in_progress'
                 ],
                 [
-                    'doctor_id' => null,
+                    'doctor_id' => \App\Models\Doctor::first()?->id,
                     'visit_date' => now(),
                 ]
             );
