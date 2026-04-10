@@ -11,6 +11,7 @@ class Measurement extends Model
 
     protected $fillable = [
         'visit_id',
+        'user_id',
         'device_id',
         'spo2',
         'pulse_rate',

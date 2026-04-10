@@ -98,6 +98,7 @@ class MeasurementController extends Controller
         // 5. Simpan 1 record pengukuran
         $measurement = Measurement::create([
             'visit_id'     => $visitId,
+            'user_id'      => $validated['user_id'] ?? null,
             'device_id'    => $device->id,
             'spo2'         => $validated['spo2'],
             'pulse_rate'   => $validated['pulse_rate'],
