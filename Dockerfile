@@ -40,4 +40,4 @@ ENV PORT="8000"
 EXPOSE 8000
 
 # Gunakan PHP Artisan Server (paling bebas konflik Apache)
-CMD php artisan serve --host=0.0.0.0 --port=${PORT}
+CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT}
