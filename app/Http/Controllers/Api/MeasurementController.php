@@ -26,7 +26,9 @@ class MeasurementController extends Controller
     {
         // 1. Validasi payload
         $validated = $request->validate([
-            'visit_id'    => 'required|exists:visits,id',
+            'visit_id'    => 'nullable|exists:visits,id',
+            'user_id'     => 'nullable|string',
+            'user_name'   => 'nullable|string',
             'mac_address' => 'nullable|string',
             'spo2'        => 'required|numeric|min:0|max:100',
             'pulse_rate'  => 'required|integer|min:0|max:300',
@@ -50,15 +52,52 @@ class MeasurementController extends Controller
             ], 403);
         }
 
-        // 3. Hitung status gabungan (worst-case antara SpO2 dan Pulse Rate)
+        // 3. Auto-link ke Patient & Visit via user_id
+        $visitId = $validated['visit_id'] ?? null;
+
+        if (!empty($validated['user_id'])) {
+            // Cari Pasien berdasarkan user_id. Jika belum ada, otomatis buatkan profilnya.
+            $patient = \App\Models\Patient::firstOrCreate(
+                ['user_id' => $validated['user_id']],
+                [
+                    'name' => $validated['user_name'] ?? 'Pasien Mobile Anonim',
+                    'medical_record_no' => 'RM-' . strtoupper(substr(uniqid(), -6)),
+                    'birth_date' => '2000-01-01',
+                    'gender' => 'M', // default
+                ]
+            );
+
+            // Buat kunjungan otomatis berstatus in_progress jika tidak punya yang pending
+            $visit = \App\Models\Visit::firstOrCreate(
+                [
+                    'patient_id' => $patient->id,
+                    'status' => 'in_progress'
+                ],
+                [
+                    'doctor_id' => null,
+                    'visit_date' => now(),
+                ]
+            );
+
+            $visitId = $visit->id;
+        }
+
+        if (!$visitId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Harus ada visit_id atau user_id yang valid.',
+            ], 400);
+        }
+
+        // 4. Hitung status gabungan (worst-case antara SpO2 dan Pulse Rate)
         $vitalStatus = Measurement::computeOverallStatus(
             (float) $validated['spo2'],
             (int)   $validated['pulse_rate']
         );
 
-        // 4. Simpan 1 record pengukuran
+        // 5. Simpan 1 record pengukuran
         $measurement = Measurement::create([
-            'visit_id'     => $validated['visit_id'],
+            'visit_id'     => $visitId,
             'device_id'    => $device->id,
             'spo2'         => $validated['spo2'],
             'pulse_rate'   => $validated['pulse_rate'],
