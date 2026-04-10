@@ -22,7 +22,6 @@ class RecentMeasurementsWidget extends BaseWidget
             ->query(
                 Measurement::query()
                     ->with(['visit.patient', 'device'])
-                    ->whereIn('vital_status', ['critical', 'warning'])
                     ->orderByDesc('recorded_at')
                     ->limit(20)
             )
@@ -59,8 +58,9 @@ class RecentMeasurementsWidget extends BaseWidget
                     ->formatStateUsing(fn (string $state) => Measurement::statusLabel($state))
                     ->color(fn (string $state) => Measurement::statusColor($state)),
             ])
-            ->emptyStateHeading('Tidak ada alert saat ini')
-            ->emptyStateDescription('Semua pengukuran dalam kondisi normal.')
-            ->emptyStateIcon('heroicon-o-heart');
+            ->emptyStateHeading('Belum ada data pengukuran')
+            ->emptyStateDescription('Data akan muncul setelah pengukuran pertama disimpan.')
+            ->emptyStateIcon('heroicon-o-heart')
+            ->defaultSort('recorded_at', 'desc');
     }
 }
