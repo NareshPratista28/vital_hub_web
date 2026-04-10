@@ -1,4 +1,4 @@
-FROM php:8.4-apache
+FROM php:8.4-cli
 
 # Install system dependencies & Node.js
 RUN apt-get update && apt-get install -y \
@@ -17,27 +17,13 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure intl \
     && docker-php-ext-install pdo pdo_pgsql mbstring exif pcntl bcmath gd intl zip
 
-# Fix Apache MPM conflict & Enable mod_rewrite
-RUN a2dismod mpm_event mpm_worker || true \
-    && a2enmod mpm_prefork rewrite
-
-# Set working directory
 WORKDIR /var/www/html
-
-# Setup Apache Web Root to point to Laravel's /public folder
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
-RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
-RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
 # Copy Composer from official image
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
 # Copy project files into container
 COPY . .
-
-# Set explicit folder permissions for Laravel
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
 # Install PHP packages
 RUN composer install --no-dev --optimize-autoloader --no-interaction
@@ -49,4 +35,9 @@ RUN npm run build
 # Optional: Run filament upgrades
 RUN php artisan filament:upgrade
 
-EXPOSE 80
+# Define port dynamically for Railway (Railway supplies PORT automatically)
+ENV PORT="8000"
+EXPOSE 8000
+
+# Gunakan PHP Artisan Server (paling bebas konflik Apache)
+CMD php artisan serve --host=0.0.0.0 --port=${PORT}
